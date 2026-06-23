@@ -391,7 +391,8 @@ body.ro .robanner .sub{opacity:.92;font-weight:400;margin-left:2px}
 <dialog id="shareDlg">
   <div class="dhead"><h2>Share &amp; Export</h2><button class="icon" data-close>✕</button></div>
   <div class="dbody">
-    <p class="note" style="margin:0 0 10px">Send the link below to your co-parent. When they open it, they'll be asked whether to merge it into their calendar. Updates are not live — re-share when you change things, or use export below to subscribe in Apple/Google.</p>
+    <p class="note" style="margin:0 0 10px">Send the link below to your co-parent. Updates are not live — re-share when you change things, or use export below to subscribe in Apple/Google.</p>
+    <div class="frow"><label style="display:flex;align-items:center;gap:8px;justify-content:flex-start"><span class="switch"><input type="checkbox" id="shareRo" checked><em></em></span>Read-only view link — they just see the calendar, can't edit or merge</label></div>
     <div class="frow"><label>Share link</label><textarea id="shareUrl" readonly style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;min-height:80px"></textarea></div>
     <div class="fsplit">
       <button class="btn primary" id="copyLink">Copy link</button>
@@ -1026,18 +1027,19 @@ $('#setDlg [data-act=reset]').addEventListener('click', ()=>{
 });
 
 // ---------- share & export ----------
-async function buildShareLink(){
+async function buildShareLink(ro){
   const payload = { calendars: S.calendars, events: S.events, custody: S.custody };
   const json = JSON.stringify(payload);
+  const pre = location.origin + location.pathname + (ro ? '#view&' : '#');
   try{
     const stream = new Blob([json]).stream().pipeThrough(new CompressionStream('deflate-raw'));
     const buf = await new Response(stream).arrayBuffer();
     const bin = String.fromCharCode(...new Uint8Array(buf));
     const b64 = btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-    return location.origin + location.pathname + '#d=' + b64;
+    return pre + 'd=' + b64;
   }catch(e){
     const b64 = btoa(unescape(encodeURIComponent(json))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-    return location.origin + location.pathname + '#j=' + b64;
+    return pre + 'j=' + b64;
   }
 }
 async function decodeShare(hash){
@@ -1092,8 +1094,9 @@ function mergePayload(p, replace){
 
 async function openShare(){
   if(READONLY) return;
-  const url = await buildShareLink();
-  $('#shareUrl').value = url;
+  const refresh = async ()=>{ $('#shareUrl').value = await buildShareLink($('#shareRo').checked); };
+  await refresh();
+  $('#shareRo').onchange = refresh;
   $('#shareDlg').showModal();
 }
 $('#copyLink').addEventListener('click', async ()=>{
