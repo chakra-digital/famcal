@@ -1,0 +1,1360 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FamCal</title>
+<style>
+:root{
+  --bg:#141416; --surface:#1d1d20; --surface2:#27272b; --surface3:#323237;
+  --text:#f5f5f7; --muted:#98989d; --faint:#5a5a5e; --line:rgba(255,255,255,.09);
+  --accent:#ff453a; --blue:#0a84ff;
+  --ca:#0a84ff; --cb:#bf5af2;
+  --shadow:0 18px 50px rgba(0,0,0,.55);
+}
+[data-theme="light"]{
+  --bg:#ffffff; --surface:#ffffff; --surface2:#f2f2f4; --surface3:#e6e6ea;
+  --text:#1d1d1f; --muted:#86868b; --faint:#c2c2c6; --line:rgba(0,0,0,.1);
+  --shadow:0 18px 50px rgba(0,0,0,.18);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; background:var(--bg); color:var(--text);
+  font:14px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  -webkit-font-smoothing:antialiased; display:flex; flex-direction:column;
+}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;padding:0}
+input,select,textarea{
+  font:inherit;color:var(--text);background:var(--surface2);
+  border:1px solid var(--line);border-radius:8px;padding:7px 10px;outline:none;
+}
+input:focus,select:focus,textarea:focusVisible,textarea:focus{border-color:var(--blue)}
+::placeholder{color:var(--faint)}
+
+/* ---------- top bar ---------- */
+.topbar{
+  display:flex;align-items:center;gap:10px;height:52px;padding:0 14px;
+  border-bottom:1px solid var(--line);flex:none;background:var(--bg);position:relative;z-index:30;
+}
+.brand{font-weight:700;font-size:15px;letter-spacing:-.2px;margin-right:4px;white-space:nowrap}
+.icon{
+  width:30px;height:30px;border-radius:7px;display:grid;place-items:center;color:var(--muted);flex:none;
+}
+.icon:hover{background:var(--surface2);color:var(--text)}
+.icon svg{width:17px;height:17px;display:block}
+.seg{
+  display:flex;background:var(--surface2);border-radius:9px;padding:2px;margin:0 auto;
+}
+.seg button{
+  padding:4px 16px;border-radius:7px;font-size:13px;color:var(--muted);transition:background .15s,color .15s;
+}
+.seg button.on{background:var(--surface3);color:var(--text);font-weight:600}
+.nav{display:flex;align-items:center;gap:2px}
+.nav .today{
+  font-size:13px;padding:4px 12px;border-radius:7px;background:var(--surface2);margin:0 4px;
+}
+.nav .today:hover{background:var(--surface3)}
+.search{width:170px;padding:5px 10px;border-radius:8px;font-size:13px;background:var(--surface2)}
+.addbtn{
+  width:30px;height:30px;border-radius:8px;background:var(--blue);color:#fff;font-size:19px;line-height:1;
+  display:grid;place-items:center;flex:none;
+}
+.addbtn:hover{filter:brightness(1.1)}
+
+/* ---------- layout ---------- */
+.app{display:flex;flex:1;min-height:0}
+aside{
+  width:228px;flex:none;border-right:1px solid var(--line);padding:14px 12px;
+  overflow-y:auto;background:var(--bg);
+}
+.app.nosb aside{display:none}
+aside h3{
+  font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;
+  color:var(--muted);margin:14px 6px 6px;
+}
+aside h3:first-child{margin-top:2px}
+.calrow{
+  display:flex;align-items:center;gap:9px;padding:5px 6px;border-radius:7px;cursor:pointer;user-select:none;
+}
+.calrow:hover{background:var(--surface2)}
+.cb{
+  width:16px;height:16px;border-radius:4.5px;flex:none;display:grid;place-items:center;
+  background:var(--c);transition:opacity .12s;
+}
+.cb svg{width:10px;height:10px;color:#fff;opacity:0;transform:scale(.6);transition:.12s}
+.calrow.on .cb svg{opacity:1;transform:scale(1)}
+.calrow:not(.on) .cb{opacity:.32}
+.calrow span{flex:1;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.calrow .edit{opacity:0;color:var(--muted);font-size:11px}
+.calrow:hover .edit{opacity:1}
+.sideact{
+  display:block;font-size:12.5px;color:var(--muted);padding:5px 6px;border-radius:7px;width:100%;text-align:left;
+}
+.sideact:hover{background:var(--surface2);color:var(--text)}
+.legend{display:flex;flex-direction:column;gap:3px;padding:0 6px}
+.legend .chip{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);padding:2px 0}
+.legend .sw{width:14px;height:14px;border-radius:4px;flex:none}
+
+main{flex:1;min-width:0;overflow-y:auto;padding:16px 26px 30px;position:relative}
+
+.view-title{font-size:29px;font-weight:700;letter-spacing:-.4px;margin:2px 0 14px}
+.view-title small{font-weight:400;color:var(--muted);font-size:29px;margin-left:6px}
+
+/* ---------- year view ---------- */
+.year{display:grid;grid-template-columns:repeat(auto-fill,minmax(252px,1fr));gap:22px 34px}
+.mini h4{font-size:14.5px;font-weight:600;margin:0 0 4px;padding:2px 4px;border-radius:6px;cursor:pointer;display:inline-block}
+.mini h4:hover{background:var(--surface2)}
+.mini.cur h4{color:var(--accent)}
+.mini .g{display:grid;grid-template-columns:repeat(7,1fr)}
+.mini .wd{font-size:9.5px;color:var(--muted);text-align:center;padding:2px 0 4px;font-weight:500}
+.mini .d{
+  position:relative;height:31px;display:flex;flex-direction:column;align-items:center;
+  cursor:pointer;border-radius:7px;padding-top:3px;
+}
+.mini .d:hover{box-shadow:inset 0 0 0 1px var(--line);background:var(--surface2)}
+.mini .d .n{
+  width:20px;height:20px;line-height:20px;text-align:center;border-radius:50%;font-size:11.5px;
+  font-variant-numeric:tabular-nums;
+}
+.mini .d.out .n{color:var(--faint)}
+.mini .d.today .n{background:var(--accent);color:#fff;font-weight:600}
+.mini .d.sel:not(.today) .n{background:var(--surface3)}
+.dots{display:flex;gap:2.5px;height:4px;margin-top:1px}
+.dots i{width:4px;height:4px;border-radius:50%}
+.d.cA{background:color-mix(in srgb,var(--ca) 16%,transparent)}
+.d.cB{background:color-mix(in srgb,var(--cb) 16%,transparent)}
+.d.cA.out,.d.cB.out{background:transparent}
+
+/* ---------- month view ---------- */
+.mwrap{display:flex;flex-direction:column;height:calc(100% - 60px);min-height:430px}
+.mhead{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--line)}
+.mhead div{font-size:12px;color:var(--muted);text-align:right;padding:4px 8px 6px;font-weight:500}
+.month{
+  display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:1fr;flex:1;min-height:0;
+}
+.mcell{
+  position:relative;border-right:1px solid var(--line);border-bottom:1px solid var(--line);
+  padding:28px 3px 2px;overflow:hidden;cursor:pointer;min-height:78px;
+}
+.mcell:nth-child(7n){border-right:none}
+.mcell .num{
+  position:absolute;top:4px;right:5px;min-width:22px;height:22px;padding:0 3px;border-radius:11px;
+  text-align:center;line-height:22px;font-size:12px;font-variant-numeric:tabular-nums;
+}
+.mcell .mon{font-weight:600}
+.mcell.out .num{color:var(--faint)}
+.mcell.out{background:color-mix(in srgb,var(--surface) 40%,transparent)}
+.mcell.today .num{background:var(--accent);color:#fff;font-weight:600}
+.mcell:hover{background:var(--surface2)}
+.mcell.cA{background:color-mix(in srgb,var(--ca) 12%,transparent)}
+.mcell.cB{background:color-mix(in srgb,var(--cb) 12%,transparent)}
+.mcell.cA.out,.mcell.cB.out{background:color-mix(in srgb,var(--surface) 55%,transparent)}
+.pill{
+  display:flex;align-items:center;gap:4px;font-size:11px;height:17px;border-radius:4px;
+  padding:0 4px;margin:1px 3px;color:var(--text);background:color-mix(in srgb,var(--c) 30%,transparent);
+  white-space:nowrap;overflow:hidden;cursor:pointer;
+}
+.pill:hover{background:color-mix(in srgb,var(--c) 45%,transparent)}
+.pill i{width:6px;height:6px;border-radius:50%;background:var(--c);flex:none}
+.pill .tm{color:var(--muted);font-variant-numeric:tabular-nums;flex:none}
+.pill span.s{overflow:hidden;text-overflow:ellipsis}
+.pill.drag{opacity:.4}
+.more{font-size:10.5px;color:var(--muted);padding:0 7px;cursor:pointer;display:block;text-align:left}
+.more:hover{color:var(--text)}
+.mcell.dropover{box-shadow:inset 0 0 0 2px var(--blue)}
+
+/* ---------- agenda ---------- */
+.agenda{max-width:680px}
+.agday{display:flex;gap:16px;padding:11px 2px;border-bottom:1px solid var(--line)}
+.agdate{width:86px;flex:none;text-align:right;cursor:pointer}
+.agdate .dn{font-size:21px;font-weight:600;line-height:1.1}
+.agdate .wk{font-size:11.5px;color:var(--muted)}
+.agday.today .dn{color:var(--accent)}
+.agitems{flex:1;display:flex;flex-direction:column;gap:5px;min-width:0;padding-top:2px}
+.agitem{display:flex;align-items:baseline;gap:9px;cursor:pointer;border-radius:6px;padding:2px 6px;margin:0 -6px}
+.agitem:hover{background:var(--surface2)}
+.agitem i{width:8px;height:8px;border-radius:50%;flex:none;transform:translateY(-1px)}
+.agitem .tm{color:var(--muted);font-size:12px;width:88px;flex:none;font-variant-numeric:tabular-nums}
+.agitem .ti{font-size:13.5px}
+.agitem .lo{color:var(--muted);font-size:12px;margin-left:6px}
+.cuchip{font-size:10.5px;border-radius:4px;padding:1px 6px;display:inline-block;margin-top:3px;color:var(--text)}
+.empty{color:var(--muted);padding:30px 0;text-align:center;font-size:13.5px}
+
+/* ---------- popover / dialogs ---------- */
+.pop{
+  position:fixed;z-index:60;width:298px;background:var(--surface);border:1px solid var(--line);
+  border-radius:13px;box-shadow:var(--shadow);padding:13px 14px;
+  animation:popin .13s ease-out;
+}
+@keyframes popin{from{opacity:0;transform:scale(.96) translateY(3px)}to{opacity:1}}
+.pop h5{margin:0 0 2px;font-size:14.5px;font-weight:600}
+.pop .sub{font-size:12px;color:var(--muted);margin-bottom:8px}
+.pop .cuchip{margin:0 0 8px}
+.poplist{display:flex;flex-direction:column;gap:2px;max-height:300px;overflow-y:auto;margin:4px 0}
+dialog{
+  background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:15px;
+  padding:0;width:430px;max-width:94vw;box-shadow:var(--shadow);
+}
+dialog::backdrop{background:rgba(0,0,0,.45);backdrop-filter:blur(3px)}
+.dhead{display:flex;align-items:center;justify-content:space-between;padding:15px 18px 8px}
+.dhead h2{margin:0;font-size:17px;font-weight:700;letter-spacing:-.2px}
+.dbody{padding:4px 18px 18px;max-height:72vh;overflow-y:auto}
+.frow{margin-bottom:11px}
+.frow label{display:block;font-size:11.5px;color:var(--muted);margin-bottom:4px;font-weight:500}
+.frow input[type=text],.frow input[type=date],.frow input[type=time],.frow select,.frow textarea{width:100%}
+.frow textarea{resize:vertical;min-height:54px}
+.fsplit{display:flex;gap:10px}
+.fsplit .frow{flex:1}
+.finline{display:flex;align-items:center;gap:8px;font-size:13px}
+.chips{display:flex;gap:7px;flex-wrap:wrap;padding:2px 0}
+.chip-c{width:21px;height:21px;border-radius:50%;cursor:pointer;border:2px solid transparent}
+.chip-c.on{border-color:var(--text)}
+.dfoot{display:flex;gap:8px;padding:0 18px 16px;align-items:center}
+.btn{background:var(--surface2);border-radius:8px;padding:6px 14px;font-size:13px}
+.btn:hover{background:var(--surface3)}
+.btn.primary{background:var(--blue);color:#fff;font-weight:600}
+.btn.primary:hover{filter:brightness(1.12)}
+.btn.danger{color:var(--accent)}
+.spacer{flex:1}
+.switch{position:relative;width:36px;height:22px;flex:none}
+.switch input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.switch em{
+  position:absolute;inset:0;border-radius:11px;background:var(--surface3);transition:.15s;
+}
+.switch em:before{
+  content:"";position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:2px;left:2px;transition:.15s;
+}
+.switch input:checked+em{background:#30d158}
+.switch input:checked+em:before{left:16px}
+.hr{border:none;border-top:1px solid var(--line);margin:14px 0}
+.note{font-size:11.5px;color:var(--muted);line-height:1.5}
+.setsec h4{font-size:12px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);margin:16px 0 8px}
+.setsec h4:first-child{margin-top:4px}
+.calman{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.calman input[type=text]{flex:1}
+.calman .sw{width:21px;height:21px;border-radius:50%;flex:none;cursor:pointer;border:none}
+.preview14{display:flex;gap:2px;margin-top:8px}
+.preview14 b{
+  flex:1;height:22px;border-radius:4px;font-size:9px;font-weight:600;display:grid;place-items:center;color:var(--text);
+}
+
+/* ---------- banner / toast / welcome ---------- */
+.banner{
+  display:flex;gap:12px;align-items:center;background:var(--blue);color:#fff;
+  padding:8px 16px;font-size:13px;flex:none;
+}
+.banner .btn{background:rgba(255,255,255,.2);color:#fff}
+.banner .btn:hover{background:rgba(255,255,255,.32)}
+.toast{
+  position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--surface3);
+  padding:9px 16px;border-radius:10px;font-size:13px;z-index:90;box-shadow:var(--shadow);
+  opacity:0;transition:opacity .2s;pointer-events:none;max-width:80vw;text-align:center;
+}
+.toast.show{opacity:1}
+.welcome{
+  border:1px dashed var(--line);border-radius:12px;padding:13px 16px;margin-bottom:16px;
+  color:var(--muted);font-size:13px;display:flex;gap:12px;align-items:flex-start;
+}
+.welcome b{color:var(--text)}
+.welcome .icon{margin-left:auto}
+
+/* ---------- read-only (shared view) ---------- */
+body.ro .addbtn,
+body.ro .topbar [data-act=share],
+body.ro .topbar [data-act=settings],
+body.ro [data-act=addcal],
+body.ro [data-act=import],
+body.ro [data-act=theme],
+body.ro #actHdr,
+body.ro .calrow .edit{display:none!important}
+body.ro .calrow{cursor:default}
+body.ro .mcell,body.ro .pill,body.ro .agitem,body.ro .mini .d{cursor:default}
+body.ro .robanner{background:linear-gradient(90deg,var(--ca),var(--cb))}
+body.ro .robanner .sub{opacity:.92;font-weight:400;margin-left:2px}
+
+/* ---------- responsive ---------- */
+.sboverlay{display:none}
+@media(max-width:900px){
+  aside{position:fixed;left:0;top:52px;bottom:0;z-index:50;transform:translateX(-100%);transition:transform .2s;box-shadow:var(--shadow)}
+  .app.sbopen aside{transform:none}
+  .app.nosb aside{display:block}
+  .app.sbopen .sboverlay{display:block;position:fixed;inset:52px 0 0;background:rgba(0,0,0,.4);z-index:45}
+  main{padding:12px 12px 30px}
+  .search{width:110px}
+  .seg button{padding:4px 10px}
+  .view-title{font-size:24px}.view-title small{font-size:24px}
+}
+@media(max-width:640px){
+  .pill{height:6px;border-radius:3px;padding:0;margin:1px 4px;background:var(--c)}
+  .pill i,.pill span{display:none}
+  .mcell{padding-top:26px;min-height:58px}
+  .nav .today{padding:4px 8px}
+  .search{display:none}
+  .agitem .tm{width:64px}
+}
+@media print{
+  .topbar,aside,.welcome,.banner{display:none!important}
+  body{background:#fff;color:#000}
+  :root{--bg:#fff;--surface:#fff;--surface2:#f4f4f4;--surface3:#e8e8e8;--text:#000;--muted:#555;--faint:#bbb;--line:#ddd}
+  main{overflow:visible;padding:0}
+  .year{grid-template-columns:repeat(3,1fr)}
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <button class="icon" data-act="sb" aria-label="Sidebar" title="Sidebar (s)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M9 4v16"/></svg>
+  </button>
+  <div class="brand">FamCal</div>
+  <button class="addbtn" data-act="new" title="New event (n)">+</button>
+  <div class="seg">
+    <button data-view="year">Year</button>
+    <button data-view="month">Month</button>
+    <button data-view="agenda">Agenda</button>
+  </div>
+  <div class="nav">
+    <button class="icon" data-act="prev" title="Previous (←)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <button class="today" data-act="today" title="Today (t)">Today</button>
+    <button class="icon" data-act="next" title="Next (→)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
+  </div>
+  <input class="search" type="search" placeholder="Search…" id="search" autocomplete="off">
+  <button class="icon" data-act="share" title="Share / Export">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+  </button>
+  <button class="icon" data-act="settings" title="Settings">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+  </button>
+</header>
+
+<div id="banner" class="banner" hidden></div>
+
+<div class="app" id="app">
+  <div class="sboverlay" onclick="toggleSb()"></div>
+  <aside>
+    <h3>Calendars</h3>
+    <div id="calList"></div>
+    <button class="sideact" data-act="addcal">+ Add calendar</button>
+    <h3 id="custodyHdr">Who has the kids</h3>
+    <div id="custodyBox"></div>
+    <h3 id="actHdr">Actions</h3>
+    <button class="sideact" data-act="share">Share link / Export…</button>
+    <button class="sideact" data-act="import">Import .ics / paste data…</button>
+    <button class="sideact" data-act="print">Print this view</button>
+    <button class="sideact" data-act="theme">Toggle theme</button>
+  </aside>
+  <main id="main"></main>
+</div>
+
+<dialog id="evDlg">
+  <div class="dhead"><h2 id="evTitle">New event</h2><button class="icon" data-close>✕</button></div>
+  <form class="dbody" id="evForm" onsubmit="return false">
+    <div class="frow"><label>Title</label><input type="text" id="ev_t" placeholder="Soccer practice, dentist, etc." autocomplete="off" required></div>
+    <div class="fsplit">
+      <div class="frow"><label>Calendar</label><select id="ev_c"></select></div>
+      <div class="frow"><label style="display:flex;align-items:center;gap:8px;justify-content:space-between">All day<span class="switch"><input type="checkbox" id="ev_ad"><em></em></span></label><div style="height:32px"></div></div>
+    </div>
+    <div class="fsplit">
+      <div class="frow"><label>Starts</label><input type="date" id="ev_sd"></div>
+      <div class="frow"><label>&nbsp;</label><input type="time" id="ev_st"></div>
+    </div>
+    <div class="fsplit">
+      <div class="frow"><label>Ends</label><input type="date" id="ev_ed"></div>
+      <div class="frow"><label>&nbsp;</label><input type="time" id="ev_et"></div>
+    </div>
+    <div class="frow"><label>Location</label><input type="text" id="ev_lo" placeholder="Optional"></div>
+    <div class="frow"><label>Notes</label><textarea id="ev_no" placeholder="Optional — pickup time, who's bringing what…"></textarea></div>
+  </form>
+  <div class="dfoot">
+    <button class="btn danger" id="evDel" hidden>Delete</button>
+    <div class="spacer"></div>
+    <button class="btn" data-close>Cancel</button>
+    <button class="btn primary" id="evSave">Save</button>
+  </div>
+</dialog>
+
+<dialog id="setDlg">
+  <div class="dhead"><h2>Settings</h2><button class="icon" data-close>✕</button></div>
+  <div class="dbody setsec" id="setBody"></div>
+  <div class="dfoot">
+    <button class="btn danger" data-act="reset">Reset everything</button>
+    <div class="spacer"></div>
+    <button class="btn primary" data-close>Done</button>
+  </div>
+</dialog>
+
+<dialog id="shareDlg">
+  <div class="dhead"><h2>Share &amp; Export</h2><button class="icon" data-close>✕</button></div>
+  <div class="dbody">
+    <p class="note" style="margin:0 0 10px">Send the link below to your co-parent. When they open it, they'll be asked whether to merge it into their calendar. Updates are not live — re-share when you change things, or use export below to subscribe in Apple/Google.</p>
+    <div class="frow"><label>Share link</label><textarea id="shareUrl" readonly style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;min-height:80px"></textarea></div>
+    <div class="fsplit">
+      <button class="btn primary" id="copyLink">Copy link</button>
+      <button class="btn" id="dlIcs">Download .ics</button>
+      <button class="btn" id="dlJson">Download .famcal</button>
+    </div>
+    <hr class="hr">
+    <p class="note">Tip: in Apple Calendar, File → New Calendar Subscription, paste the file URL. In Google Calendar, Settings → Add calendar → From URL.</p>
+  </div>
+</dialog>
+
+<dialog id="importDlg">
+  <div class="dhead"><h2>Import</h2><button class="icon" data-close>✕</button></div>
+  <div class="dbody">
+    <p class="note" style="margin:0 0 10px">Paste a FamCal share link, a .famcal JSON, or .ics text. Or pick a file.</p>
+    <div class="frow"><textarea id="impText" placeholder="Paste here…" style="min-height:120px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px"></textarea></div>
+    <div class="frow"><input type="file" id="impFile" accept=".ics,.json,.famcal,text/calendar,application/json"></div>
+    <div class="frow"><label style="display:flex;align-items:center;gap:8px;justify-content:flex-start">Replace existing instead of merging<span class="switch"><input type="checkbox" id="impReplace"><em></em></span></label></div>
+  </div>
+  <div class="dfoot">
+    <div class="spacer"></div>
+    <button class="btn" data-close>Cancel</button>
+    <button class="btn primary" id="impGo">Import</button>
+  </div>
+</dialog>
+
+<div id="pop" class="pop" hidden></div>
+<div id="toast" class="toast"></div>
+
+<script>
+'use strict';
+
+// ---------- constants ----------
+const DAY = 86400000;
+const KEY = 'famcal.v1';
+const PALETTE = ['#0a84ff','#bf5af2','#ff9f0a','#30d158','#ff453a','#5e5ce6','#ff375f','#64d2ff','#ffd60a','#ac8e68','#32d74b','#ff6482'];
+const PARENT_PAL = ['#0a84ff','#bf5af2','#ff9f0a','#30d158','#ff453a','#64d2ff'];
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const WEEKDAY_S = ['S','M','T','W','T','F','S'];
+const WEEKDAY_L = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+// ---------- date utils ----------
+const pad = n => String(n).padStart(2,'0');
+const isoLocal = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parseISO = s => { const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); };
+const startOfMonth = d => new Date(d.getFullYear(), d.getMonth(), 1);
+const endOfMonth = d => new Date(d.getFullYear(), d.getMonth()+1, 0);
+const addDays = (d,n) => { const r=new Date(d); r.setDate(r.getDate()+n); return r; };
+const addMonths = (d,n) => { const r=new Date(d); r.setDate(1); r.setMonth(r.getMonth()+n); return r; };
+const startOfDay = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+const sameDay = (a,b) => isoLocal(a)===isoLocal(b);
+const daysBetween = (a,b) => Math.round((startOfDay(b)-startOfDay(a))/DAY);
+const mod = (x,n) => ((x%n)+n)%n;
+const fmtTime = (h,m) => { const ap=h>=12?'PM':'AM'; const hh=((h%12)||12); return m? `${hh}:${pad(m)} ${ap}` : `${hh} ${ap}`; };
+const fmtT = s => { const [h,m]=s.split(':').map(Number); return fmtTime(h,m); };
+const uid = () => Math.random().toString(36).slice(2,10);
+
+// ---------- state ----------
+let S = load();
+let view = 'month';
+let cursor = new Date();
+let selected = isoLocal(new Date());
+let search = '';
+let editingId = null;
+let dragId = null;
+let READONLY = false;
+
+function defaults(){
+  const today = new Date();
+  const anchor = isoLocal(addDays(today, -today.getDay())); // start of this week
+  return {
+    calendars:[
+      {id:'fam', name:'Family', color:'#0a84ff', on:true},
+      {id:'kids', name:'Kids', color:'#bf5af2', on:true},
+      {id:'work', name:'Work', color:'#ff9f0a', on:true},
+      {id:'med',  name:'Medical', color:'#ff453a', on:true},
+    ],
+    events:[],
+    custody:{
+      enabled:true,
+      pattern:'alt-week',
+      anchorDate: anchor,
+      anchorParent:0,
+      parents:[
+        {name:'House A', color:'#0a84ff'},
+        {name:'House B', color:'#bf5af2'},
+      ],
+      custom:{},
+    },
+    prefs:{ theme:'dark', firstDay:0, sb:true, seeded:false },
+    v:1,
+  };
+}
+function load(){
+  try{
+    const s = JSON.parse(localStorage.getItem(KEY));
+    if(!s || s.v!==1) return defaults();
+    // back-fill any missing fields
+    const d = defaults();
+    for(const k of Object.keys(d)) if(s[k]===undefined) s[k]=d[k];
+    for(const k of Object.keys(d.prefs)) if(s.prefs[k]===undefined) s.prefs[k]=d.prefs[k];
+    return s;
+  }catch(e){ return defaults(); }
+}
+function save(){ localStorage.setItem(KEY, JSON.stringify(S)); }
+
+// ---------- seed sample data on first run ----------
+function seed(){
+  if(S.prefs.seeded) return;
+  const t = new Date();
+  const m = t.getMonth(), y = t.getFullYear();
+  const mk = (d, t1, t2, ti, cal, lo, no='') => ({
+    id:uid(), title:ti, calId:cal, allDay:!t1,
+    start:`${y}-${pad(m+1)}-${pad(d)}${t1?'T'+t1:''}`,
+    end:  `${y}-${pad(m+1)}-${pad(d)}${t2?'T'+t2:''}`,
+    location:lo||'', notes:no,
+  });
+  S.events.push(
+    mk(5, '15:30','16:30','Soccer practice','kids','Field 3','Bring cleats'),
+    mk(12,'10:00','11:00','Pediatrician','med','Dr. Chen office'),
+    mk(14,null,null,'School pickup switches to Dad','fam'),
+    mk(20,'18:00','21:00','Birthday party — Maya','kids','Sunset Park','Gift: art kit'),
+    mk(22,'09:00','17:00','Conference','work'),
+    mk(28,null,null,'Camp drop-off','kids','YMCA, 8am'),
+  );
+  S.prefs.seeded = true;
+  save();
+}
+
+// ---------- search ----------
+function matchesSearch(e){
+  if(!search) return true;
+  const q = search.toLowerCase();
+  return (e.title||'').toLowerCase().includes(q)
+      || (e.location||'').toLowerCase().includes(q)
+      || (e.notes||'').toLowerCase().includes(q);
+}
+
+// ---------- custody engine ----------
+function parentAt(date){
+  const c = S.custody; if(!c || !c.enabled) return null;
+  const k = isoLocal(date);
+  if(c.custom && c.custom[k]!=null) return c.custom[k];
+  if(!c.anchorDate) return null;
+  const diff = daysBetween(parseISO(c.anchorDate), date);
+  if(c.pattern==='alt-week'){
+    const w = Math.floor(diff/7);
+    return mod(w,2)===0 ? c.anchorParent : 1-c.anchorParent;
+  }
+  if(c.pattern==='2-2-3'){
+    const seq = [0,0,1,1,0,0,0, 1,1,0,0,1,1,1];
+    const idx = seq[mod(diff,14)];
+    return idx===0 ? c.anchorParent : 1-c.anchorParent;
+  }
+  if(c.pattern==='week-weekend'){
+    // anchor parent has Mon-Fri, other has weekend
+    const day = date.getDay();
+    return (day===0 || day===6) ? 1-c.anchorParent : c.anchorParent;
+  }
+  if(c.pattern==='alt-weekend'){
+    // anchorParent is the primary home (has all weekdays). The other parent
+    // gets alternating weekends. anchorDate should be a Saturday on which the
+    // OTHER parent has the kids.
+    const day = date.getDay();
+    if(day!==0 && day!==6) return c.anchorParent;        // weekdays => primary home
+    const sat = day===6 ? date : addDays(date,-1);        // tie Sun to its Saturday
+    const weeks = Math.floor(daysBetween(parseISO(c.anchorDate), sat)/7);
+    return mod(weeks,2)===0 ? 1-c.anchorParent : c.anchorParent;
+  }
+  return null;
+}
+function tintClass(date){
+  const p = parentAt(date); if(p==null) return '';
+  return p===0 ? 'cA' : 'cB';
+}
+function applyCustodyColors(){
+  document.documentElement.style.setProperty('--ca', S.custody.parents[0].color);
+  document.documentElement.style.setProperty('--cb', S.custody.parents[1].color);
+}
+
+// ---------- events lookup ----------
+function eventsOn(date){
+  const k = isoLocal(date);
+  const onCals = new Set(S.calendars.filter(c=>c.on!==false).map(c=>c.id));
+  return S.events.filter(e=>{
+    if(!onCals.has(e.calId)) return false;
+    const sd = (e.start||'').slice(0,10);
+    const ed = (e.end||e.start||'').slice(0,10);
+    return k>=sd && k<=ed;
+  }).sort((a,b)=>{
+    const at = (a.start||'').length>10 ? a.start.slice(11) : '';
+    const bt = (b.start||'').length>10 ? b.start.slice(11) : '';
+    if(a.allDay && !b.allDay) return -1;
+    if(b.allDay && !a.allDay) return 1;
+    return at.localeCompare(bt);
+  });
+}
+function calOf(id){ return S.calendars.find(c=>c.id===id) || S.calendars[0]; }
+
+// ---------- render ----------
+const $ = sel => document.querySelector(sel);
+const $$ = sel => document.querySelectorAll(sel);
+
+function render(){
+  document.documentElement.dataset.theme = S.prefs.theme||'dark';
+  applyCustodyColors();
+  $$('.seg button').forEach(b=>b.classList.toggle('on', b.dataset.view===view));
+  document.getElementById('app').classList.toggle('nosb', !S.prefs.sb);
+  renderSidebar();
+  if(view==='year') renderYear();
+  else if(view==='month') renderMonth();
+  else renderAgenda();
+}
+
+function renderSidebar(){
+  const list = $('#calList');
+  list.innerHTML = S.calendars.map(c=>`
+    <div class="calrow ${c.on!==false?'on':''}" data-cal="${c.id}">
+      <div class="cb" style="--c:${c.color}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+      <span>${esc(c.name)}</span>
+      <button class="edit" data-act="editcal" data-cal="${c.id}">Edit</button>
+    </div>`).join('');
+  list.querySelectorAll('.calrow').forEach(row=>{
+    row.addEventListener('click', e=>{
+      if(e.target.closest('[data-act=editcal]')) return;
+      const id = row.dataset.cal;
+      const c = calOf(id); c.on = !(c.on!==false);
+      save(); render();
+    });
+  });
+  list.querySelectorAll('[data-act=editcal]').forEach(b=>{
+    b.addEventListener('click', e=>{ e.stopPropagation(); openSettings('cals'); });
+  });
+
+  const cust = $('#custodyBox');
+  if(S.custody.enabled){
+    cust.innerHTML = `
+      <div class="legend">
+        <div class="chip"><div class="sw" style="background:${S.custody.parents[0].color}"></div>${esc(S.custody.parents[0].name)}</div>
+        <div class="chip"><div class="sw" style="background:${S.custody.parents[1].color}"></div>${esc(S.custody.parents[1].name)}</div>
+        <div class="chip" style="margin-top:4px">Pattern: ${patternLabel(S.custody.pattern)}</div>
+      </div>
+      <button class="sideact" data-act="custody">Configure rotation…</button>`;
+  }else{
+    cust.innerHTML = `<button class="sideact" data-act="custody">Enable rotation…</button>`;
+  }
+}
+function patternLabel(p){ return {'alt-week':'Alternating weeks','2-2-3':'2-2-3','week-weekend':'Weekdays / weekends','alt-weekend':'Primary home + alternating weekends'}[p]||p; }
+
+// ---------- year view ----------
+function renderYear(){
+  const y = cursor.getFullYear();
+  const today = new Date();
+  let html = `<div class="view-title">${y}<small>Year</small></div><div class="year">`;
+  for(let m=0;m<12;m++){
+    const first = new Date(y,m,1);
+    const isCur = today.getFullYear()===y && today.getMonth()===m;
+    const fd = S.prefs.firstDay||0;
+    const startWd = mod(first.getDay()-fd, 7);
+    let cells = '';
+    // weekday header
+    let hdr = '<div class="g">';
+    for(let i=0;i<7;i++) hdr += `<div class="wd">${WEEKDAY_S[(fd+i)%7]}</div>`;
+    hdr += '</div>';
+    let grid = '<div class="g">';
+    for(let i=0;i<42;i++){
+      const date = addDays(first, i - startWd);
+      const out = date.getMonth()!==m;
+      const isToday = sameDay(date, today);
+      const isSel = isoLocal(date)===selected;
+      const ev = eventsOn(date).filter(matchesSearch);
+      const tint = tintClass(date);
+      let dots = '<div class="dots">';
+      const seen = new Set();
+      for(const e of ev){
+        const c = calOf(e.calId).color;
+        if(seen.has(c)) continue; seen.add(c);
+        if(seen.size>3) break;
+        dots += `<i style="background:${c}"></i>`;
+      }
+      dots += '</div>';
+      grid += `<div class="d ${out?'out':''} ${isToday?'today':''} ${isSel?'sel':''} ${tint}" data-d="${isoLocal(date)}"><div class="n">${date.getDate()}</div>${dots}</div>`;
+      if(i>=34 && (i+1)%7===0 && addDays(first, i-startWd+1).getMonth()!==m) break;
+    }
+    grid += '</div>';
+    html += `<div class="mini ${isCur?'cur':''}" data-m="${m}"><h4 data-m="${m}">${MONTH_NAMES[m]}</h4>${hdr}${grid}</div>`;
+  }
+  html += '</div>';
+  $('#main').innerHTML = html;
+  $('#main').querySelectorAll('.mini h4').forEach(h=>{
+    h.addEventListener('click', ()=>{
+      cursor = new Date(y, +h.dataset.m, 1);
+      view = 'month'; render();
+    });
+  });
+  $('#main').querySelectorAll('.mini .d').forEach(d=>{
+    d.addEventListener('click', e=>{
+      selected = d.dataset.d;
+      const ev = eventsOn(parseISO(d.dataset.d)).filter(matchesSearch);
+      if(ev.length){ openDayPop(d, parseISO(d.dataset.d)); }
+      else { openEvent({date:d.dataset.d}); }
+    });
+  });
+}
+
+// ---------- month view ----------
+function renderMonth(){
+  const y = cursor.getFullYear(), m = cursor.getMonth();
+  const today = new Date();
+  const fd = S.prefs.firstDay||0;
+  const first = new Date(y,m,1);
+  const startWd = mod(first.getDay()-fd, 7);
+  let html = `<div class="view-title">${MONTH_NAMES[m]}<small>${y}</small></div><div class="mwrap"><div class="mhead">`;
+  for(let i=0;i<7;i++) html += `<div>${WEEKDAY_L[(fd+i)%7]}</div>`;
+  html += '</div><div class="month">';
+  for(let i=0;i<42;i++){
+    const date = addDays(first, i - startWd);
+    const out = date.getMonth()!==m;
+    const isToday = sameDay(date, today);
+    const tint = tintClass(date);
+    const ev = eventsOn(date).filter(matchesSearch);
+    const max = 3;
+    let pills = '';
+    for(let j=0;j<Math.min(ev.length,max);j++){
+      const e = ev[j];
+      const c = calOf(e.calId).color;
+      const tm = e.allDay ? '' : `<span class="tm">${fmtT(e.start.slice(11,16))}</span>`;
+      pills += `<div class="pill" style="--c:${c}" draggable="true" data-id="${e.id}"><i></i>${tm}<span class="s">${esc(e.title)}</span></div>`;
+    }
+    if(ev.length>max) pills += `<button class="more" data-d="${isoLocal(date)}">+${ev.length-max} more</button>`;
+    const isFirstOfMonth = date.getDate()===1;
+    const numLbl = isFirstOfMonth ? `${MONTH_NAMES[date.getMonth()].slice(0,3)} ${date.getDate()}` : date.getDate();
+    html += `<div class="mcell ${out?'out':''} ${isToday?'today':''} ${tint}" data-d="${isoLocal(date)}"><div class="num ${isFirstOfMonth?'mon':''}">${numLbl}</div>${pills}</div>`;
+  }
+  html += '</div></div>';
+  $('#main').innerHTML = html;
+  wireMonthCells();
+}
+
+function wireMonthCells(){
+  $$('.mcell').forEach(cell=>{
+    cell.addEventListener('click', e=>{
+      if(e.target.closest('.pill') || e.target.closest('.more')) return;
+      openEvent({date: cell.dataset.d});
+    });
+    cell.addEventListener('dragover', e=>{ if(dragId){ e.preventDefault(); cell.classList.add('dropover'); }});
+    cell.addEventListener('dragleave', ()=> cell.classList.remove('dropover'));
+    cell.addEventListener('drop', e=>{
+      e.preventDefault(); cell.classList.remove('dropover');
+      if(READONLY || !dragId) return;
+      const ev = S.events.find(x=>x.id===dragId); if(!ev) return;
+      const newD = cell.dataset.d;
+      const oldS = ev.start.slice(0,10), oldE = (ev.end||ev.start).slice(0,10);
+      const span = daysBetween(parseISO(oldS), parseISO(oldE));
+      ev.start = newD + ev.start.slice(10);
+      ev.end   = isoLocal(addDays(parseISO(newD), span)) + (ev.end||'').slice(10);
+      save(); render(); toast('Moved');
+    });
+  });
+  $$('.pill').forEach(p=>{
+    p.addEventListener('click', e=>{ e.stopPropagation(); openEvent({id: p.dataset.id}); });
+    p.addEventListener('dragstart', e=>{ dragId = p.dataset.id; p.classList.add('drag'); });
+    p.addEventListener('dragend',   e=>{ dragId = null; p.classList.remove('drag'); });
+  });
+  $$('.more').forEach(b=>{
+    b.addEventListener('click', e=>{ e.stopPropagation(); openDayPop(b, parseISO(b.dataset.d)); });
+  });
+}
+
+// ---------- agenda view ----------
+function renderAgenda(){
+  const today = new Date();
+  let html = `<div class="view-title">Agenda<small>next 60 days</small></div><div class="agenda">`;
+  let any = false;
+  for(let i=0;i<60;i++){
+    const date = addDays(cursor, i);
+    const ev = eventsOn(date).filter(matchesSearch);
+    if(!ev.length) continue;
+    any = true;
+    const tint = tintClass(date);
+    const p = parentAt(date);
+    const isToday = sameDay(date, today);
+    html += `<div class="agday ${isToday?'today':''}" data-d="${isoLocal(date)}">
+      <div class="agdate"><div class="dn">${date.getDate()}</div><div class="wk">${WEEKDAY_L[date.getDay()]} · ${MONTH_NAMES[date.getMonth()].slice(0,3)}</div></div>
+      <div class="agitems">
+        ${p!=null?`<div class="cuchip" style="background:${S.custody.parents[p].color}33;color:${S.custody.parents[p].color}">${esc(S.custody.parents[p].name)}</div>`:''}
+        ${ev.map(e=>{
+          const c = calOf(e.calId).color;
+          const tm = e.allDay ? 'All day' : `${fmtT(e.start.slice(11,16))}${e.end&&e.end.length>10?` – ${fmtT(e.end.slice(11,16))}`:''}`;
+          return `<div class="agitem" data-id="${e.id}"><i style="background:${c}"></i><div class="tm">${tm}</div><div class="ti">${esc(e.title)}${e.location?`<span class="lo">· ${esc(e.location)}</span>`:''}</div></div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }
+  if(!any) html += `<div class="empty">No events in the next 60 days${search?` matching "${esc(search)}"`:''}. <br><br><button class="btn primary" data-act="new">Add one</button></div>`;
+  html += '</div>';
+  $('#main').innerHTML = html;
+  $$('.agitem').forEach(a=> a.addEventListener('click', ()=> openEvent({id:a.dataset.id})));
+  $$('.agdate').forEach(d=> d.addEventListener('click', ()=>{ const day=d.parentElement.dataset.d; cursor=parseISO(day); view='month'; render(); }));
+}
+
+// ---------- day popover (more / year click) ----------
+function openDayPop(anchor, date){
+  const pop = $('#pop');
+  const ev = eventsOn(date).filter(matchesSearch);
+  const p = parentAt(date);
+  pop.innerHTML = `
+    <h5>${WEEKDAY_L[date.getDay()]}, ${MONTH_NAMES[date.getMonth()]} ${date.getDate()}</h5>
+    <div class="sub">${ev.length} event${ev.length===1?'':'s'}</div>
+    ${p!=null?`<div class="cuchip" style="background:${S.custody.parents[p].color}33;color:${S.custody.parents[p].color}">${esc(S.custody.parents[p].name)}</div>`:''}
+    <div class="poplist">
+      ${ev.map(e=>{
+        const c = calOf(e.calId).color;
+        const tm = e.allDay ? 'All day' : fmtT(e.start.slice(11,16));
+        return `<div class="agitem" data-id="${e.id}"><i style="background:${c}"></i><div class="tm">${tm}</div><div class="ti">${esc(e.title)}</div></div>`;
+      }).join('')}
+    </div>
+    <div style="display:flex;gap:6px;margin-top:6px">
+      ${READONLY?'':'<button class="btn primary" data-act="newhere">+ Add</button>'}
+      <div class="spacer"></div>
+      <button class="btn" data-act="goto">Open day</button>
+    </div>`;
+  pop.hidden = false;
+  const r = anchor.getBoundingClientRect();
+  const W = pop.offsetWidth, H = pop.offsetHeight;
+  let x = r.left, y = r.bottom + 6;
+  if(x+W > innerWidth-8) x = innerWidth-W-8;
+  if(y+H > innerHeight-8) y = r.top - H - 6;
+  if(x<8) x = 8;
+  if(y<8) y = 8;
+  pop.style.left = x+'px'; pop.style.top = y+'px';
+  pop.querySelectorAll('.agitem').forEach(a=> a.addEventListener('click', ()=>{ closePop(); openEvent({id:a.dataset.id}); }));
+  pop.querySelector('[data-act=newhere]')?.addEventListener('click', ()=>{ closePop(); openEvent({date:isoLocal(date)}); });
+  pop.querySelector('[data-act=goto]').addEventListener('click', ()=>{ closePop(); cursor=date; view='month'; render(); });
+}
+function closePop(){ const p=$('#pop'); p.hidden=true; }
+addEventListener('click', e=>{
+  if(!e.target.closest('#pop') && !e.target.closest('.d') && !e.target.closest('.more')) closePop();
+});
+addEventListener('scroll', closePop, true);
+addEventListener('resize', closePop);
+
+// ---------- event editor ----------
+function openEvent(opt){
+  if(READONLY) return;
+  const dlg = $('#evDlg');
+  const calSel = $('#ev_c');
+  calSel.innerHTML = S.calendars.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
+  if(opt.id){
+    const e = S.events.find(x=>x.id===opt.id);
+    editingId = e.id;
+    $('#evTitle').textContent = 'Edit event';
+    $('#ev_t').value = e.title;
+    $('#ev_c').value = e.calId;
+    $('#ev_ad').checked = !!e.allDay;
+    $('#ev_sd').value = e.start.slice(0,10);
+    $('#ev_ed').value = (e.end||e.start).slice(0,10);
+    $('#ev_st').value = e.allDay ? '' : (e.start.slice(11,16)||'09:00');
+    $('#ev_et').value = e.allDay ? '' : ((e.end||'').slice(11,16)||'10:00');
+    $('#ev_lo').value = e.location||'';
+    $('#ev_no').value = e.notes||'';
+    $('#evDel').hidden = false;
+  }else{
+    editingId = null;
+    const d = opt.date || isoLocal(cursor);
+    $('#evTitle').textContent = 'New event';
+    $('#ev_t').value = '';
+    $('#ev_c').value = S.calendars[0].id;
+    $('#ev_ad').checked = false;
+    $('#ev_sd').value = d; $('#ev_ed').value = d;
+    $('#ev_st').value = '09:00'; $('#ev_et').value = '10:00';
+    $('#ev_lo').value = ''; $('#ev_no').value = '';
+    $('#evDel').hidden = true;
+  }
+  dlg.showModal();
+  setTimeout(()=> $('#ev_t').focus(), 30);
+}
+$('#ev_ad').addEventListener('change', e=>{
+  const off = e.target.checked;
+  $('#ev_st').disabled = off; $('#ev_et').disabled = off;
+});
+$('#evSave').addEventListener('click', ()=>{
+  const t = $('#ev_t').value.trim();
+  if(!t){ $('#ev_t').focus(); return; }
+  const ad = $('#ev_ad').checked;
+  const sd = $('#ev_sd').value, ed = $('#ev_ed').value || sd;
+  const st = $('#ev_st').value, et = $('#ev_et').value;
+  const e = editingId ? S.events.find(x=>x.id===editingId) : { id: uid() };
+  e.title = t;
+  e.calId = $('#ev_c').value;
+  e.allDay = ad;
+  e.start = ad ? sd : `${sd}T${st||'09:00'}`;
+  e.end   = ad ? ed : `${ed}T${et||st||'10:00'}`;
+  e.location = $('#ev_lo').value.trim();
+  e.notes = $('#ev_no').value.trim();
+  if(!editingId) S.events.push(e);
+  save(); render(); $('#evDlg').close();
+  toast(editingId ? 'Saved' : 'Added');
+});
+$('#evDel').addEventListener('click', ()=>{
+  if(!editingId) return;
+  if(!confirm('Delete this event?')) return;
+  S.events = S.events.filter(e=>e.id!==editingId);
+  save(); render(); $('#evDlg').close();
+  toast('Deleted');
+});
+$$('#evDlg [data-close]').forEach(b=> b.addEventListener('click', ()=> $('#evDlg').close()));
+
+// ---------- settings ----------
+function openSettings(section){
+  if(READONLY) return;
+  const body = $('#setBody');
+  body.innerHTML = `
+    <h4>Calendars</h4>
+    <div id="calsEditor"></div>
+    <button class="btn" id="addCalBtn" style="margin-top:4px">+ Add calendar</button>
+
+    <h4>Custody rotation</h4>
+    <div class="finline" style="margin-bottom:10px"><span class="switch"><input type="checkbox" id="set_cu" ${S.custody.enabled?'checked':''}><em></em></span><span>Show subtle background tints for which house has the kids</span></div>
+    <div id="custodyEditor" ${S.custody.enabled?'':'style="opacity:.4;pointer-events:none"'}>
+      <div class="fsplit">
+        <div class="frow"><label>Pattern</label><select id="set_pat">
+          <option value="alt-week"${S.custody.pattern==='alt-week'?' selected':''}>Alternating weeks</option>
+          <option value="2-2-3"${S.custody.pattern==='2-2-3'?' selected':''}>2-2-3</option>
+          <option value="week-weekend"${S.custody.pattern==='week-weekend'?' selected':''}>Weekdays / weekends</option>
+          <option value="alt-weekend"${S.custody.pattern==='alt-weekend'?' selected':''}>Primary home + alternating weekends</option>
+        </select></div>
+        <div class="frow"><label>Anchor date</label><input type="date" id="set_anc" value="${S.custody.anchorDate}"></div>
+      </div>
+      <div class="frow"><label>On the anchor date, who has the kids?</label>
+        <select id="set_ap">
+          <option value="0"${S.custody.anchorParent===0?' selected':''}>${esc(S.custody.parents[0].name)}</option>
+          <option value="1"${S.custody.anchorParent===1?' selected':''}>${esc(S.custody.parents[1].name)}</option>
+        </select>
+      </div>
+      <div class="fsplit">
+        <div class="frow"><label>Parent A name</label><input type="text" id="set_pa" value="${esc(S.custody.parents[0].name)}"></div>
+        <div class="frow"><label>Parent B name</label><input type="text" id="set_pb" value="${esc(S.custody.parents[1].name)}"></div>
+      </div>
+      <div class="fsplit">
+        <div class="frow"><label>Color A</label><div class="chips" id="paChips"></div></div>
+        <div class="frow"><label>Color B</label><div class="chips" id="pbChips"></div></div>
+      </div>
+      <div class="frow"><label>Preview (next 14 days)</label><div class="preview14" id="preview14"></div></div>
+      <p class="note">Tap a day in the calendar then choose <b>Override custody</b> from the editor to set one-off swaps; saved overrides take priority over the pattern.</p>
+    </div>
+
+    <h4>Display</h4>
+    <div class="finline" style="margin-bottom:8px"><span class="switch"><input type="checkbox" id="set_th" ${S.prefs.theme==='dark'?'checked':''}><em></em></span><span>Dark theme</span></div>
+    <div class="frow"><label>Week starts on</label><select id="set_fd">
+      <option value="0"${S.prefs.firstDay===0?' selected':''}>Sunday</option>
+      <option value="1"${S.prefs.firstDay===1?' selected':''}>Monday</option>
+    </select></div>
+  `;
+  renderCalsEditor();
+  renderParentChips();
+  renderPreview();
+
+  $('#set_cu').addEventListener('change', e=>{ S.custody.enabled = e.target.checked; save(); render(); openSettings(); });
+  $('#set_pat').addEventListener('change', e=>{ S.custody.pattern = e.target.value; save(); render(); renderPreview(); });
+  $('#set_anc').addEventListener('change', e=>{ S.custody.anchorDate = e.target.value; save(); render(); renderPreview(); });
+  $('#set_ap').addEventListener('change', e=>{ S.custody.anchorParent = +e.target.value; save(); render(); renderPreview(); });
+  $('#set_pa').addEventListener('input', e=>{ S.custody.parents[0].name = e.target.value; save(); render(); });
+  $('#set_pb').addEventListener('input', e=>{ S.custody.parents[1].name = e.target.value; save(); render(); });
+  $('#set_th').addEventListener('change', e=>{ S.prefs.theme = e.target.checked?'dark':'light'; save(); render(); });
+  $('#set_fd').addEventListener('change', e=>{ S.prefs.firstDay = +e.target.value; save(); render(); });
+  $('#addCalBtn').addEventListener('click', ()=>{
+    const used = new Set(S.calendars.map(c=>c.color));
+    const color = PALETTE.find(c=>!used.has(c)) || PALETTE[S.calendars.length%PALETTE.length];
+    S.calendars.push({id:uid(), name:'New', color, on:true});
+    save(); render(); renderCalsEditor();
+  });
+
+  $('#setDlg').showModal();
+  if(section==='cals') $('#calsEditor').scrollIntoView({block:'start'});
+}
+
+function renderCalsEditor(){
+  const box = $('#calsEditor');
+  box.innerHTML = S.calendars.map((c,i)=>`
+    <div class="calman" data-id="${c.id}">
+      <button class="sw" style="background:${c.color}" data-act="color"></button>
+      <input type="text" value="${esc(c.name)}" data-act="name">
+      <button class="icon" data-act="del" title="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg></button>
+    </div>`).join('');
+  box.querySelectorAll('.calman').forEach(row=>{
+    const id = row.dataset.id;
+    row.querySelector('[data-act=name]').addEventListener('input', e=>{ calOf(id).name = e.target.value; save(); render(); });
+    row.querySelector('[data-act=color]').addEventListener('click', e=>{
+      const cur = calOf(id);
+      const i = PALETTE.indexOf(cur.color);
+      cur.color = PALETTE[(i+1)%PALETTE.length];
+      e.target.style.background = cur.color;
+      save(); render();
+    });
+    row.querySelector('[data-act=del]').addEventListener('click', ()=>{
+      if(S.calendars.length<=1){ toast('Need at least one calendar'); return; }
+      if(!confirm(`Delete calendar "${calOf(id).name}"? Its events will move to "${S.calendars.find(c=>c.id!==id).name}".`)) return;
+      const fallback = S.calendars.find(c=>c.id!==id).id;
+      S.events.forEach(e=>{ if(e.calId===id) e.calId = fallback; });
+      S.calendars = S.calendars.filter(c=>c.id!==id);
+      save(); render(); renderCalsEditor();
+    });
+  });
+}
+function renderParentChips(){
+  ['pa','pb'].forEach((k,idx)=>{
+    const box = $(`#${k}Chips`);
+    box.innerHTML = PARENT_PAL.map(c=>`<button type="button" class="chip-c ${S.custody.parents[idx].color===c?'on':''}" style="background:${c}" data-c="${c}"></button>`).join('');
+    box.querySelectorAll('.chip-c').forEach(b=> b.addEventListener('click', ()=>{
+      S.custody.parents[idx].color = b.dataset.c;
+      save(); render(); openSettings();
+    }));
+  });
+}
+function renderPreview(){
+  const box = $('#preview14'); if(!box) return;
+  let h='';
+  for(let i=0;i<14;i++){
+    const d = addDays(new Date(), i);
+    const p = parentAt(d);
+    const c = p==null ? 'var(--surface3)' : S.custody.parents[p].color+'aa';
+    h += `<b style="background:${c}">${d.getDate()}</b>`;
+  }
+  box.innerHTML = h;
+}
+$$('#setDlg [data-close]').forEach(b=> b.addEventListener('click', ()=> $('#setDlg').close()));
+$('#setDlg [data-act=reset]').addEventListener('click', ()=>{
+  if(!confirm('Reset everything? Calendars, events, and custody settings will be cleared on this device.')) return;
+  localStorage.removeItem(KEY); S = defaults(); seed(); save(); render(); $('#setDlg').close();
+  toast('Reset');
+});
+
+// ---------- share & export ----------
+async function buildShareLink(){
+  const payload = { calendars: S.calendars, events: S.events, custody: S.custody };
+  const json = JSON.stringify(payload);
+  try{
+    const stream = new Blob([json]).stream().pipeThrough(new CompressionStream('deflate-raw'));
+    const buf = await new Response(stream).arrayBuffer();
+    const bin = String.fromCharCode(...new Uint8Array(buf));
+    const b64 = btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+    return location.origin + location.pathname + '#d=' + b64;
+  }catch(e){
+    const b64 = btoa(unescape(encodeURIComponent(json))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+    return location.origin + location.pathname + '#j=' + b64;
+  }
+}
+async function decodeShare(hash){
+  try{
+    if(hash.startsWith('#d=')){
+      const b64 = hash.slice(3).replace(/-/g,'+').replace(/_/g,'/');
+      const pad = b64.length%4 ? '='.repeat(4-b64.length%4) : '';
+      const bytes = Uint8Array.from(atob(b64+pad), c=>c.charCodeAt(0));
+      const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+      const text = await new Response(stream).text();
+      return JSON.parse(text);
+    }
+    if(hash.startsWith('#j=')){
+      const b64 = hash.slice(3).replace(/-/g,'+').replace(/_/g,'/');
+      const pad = b64.length%4 ? '='.repeat(4-b64.length%4) : '';
+      return JSON.parse(decodeURIComponent(escape(atob(b64+pad))));
+    }
+  }catch(e){ console.warn('share decode',e); }
+  return null;
+}
+
+function mergePayload(p, replace){
+  if(replace){
+    if(p.calendars) S.calendars = p.calendars;
+    if(p.custody) S.custody = p.custody;
+    S.events = p.events || [];
+  }else{
+    // merge calendars by name
+    if(p.calendars){
+      for(const inc of p.calendars){
+        const ex = S.calendars.find(c=>c.name.toLowerCase()===inc.name.toLowerCase());
+        if(!ex) S.calendars.push({...inc, id: inc.id||uid()});
+      }
+    }
+    // remap calId -> existing id if name matches
+    const nameToId = new Map(S.calendars.map(c=>[c.name.toLowerCase(), c.id]));
+    if(p.events){
+      const existingIds = new Set(S.events.map(e=>e.id));
+      for(const ie of p.events){
+        const incName = (p.calendars||[]).find(c=>c.id===ie.calId)?.name?.toLowerCase();
+        const mappedCal = incName && nameToId.get(incName) || S.calendars[0].id;
+        const merged = {...ie, calId: mappedCal, id: ie.id||uid()};
+        if(existingIds.has(merged.id)){
+          // update in place
+          Object.assign(S.events.find(e=>e.id===merged.id), merged);
+        }else S.events.push(merged);
+      }
+    }
+  }
+  save();
+}
+
+async function openShare(){
+  if(READONLY) return;
+  const url = await buildShareLink();
+  $('#shareUrl').value = url;
+  $('#shareDlg').showModal();
+}
+$('#copyLink').addEventListener('click', async ()=>{
+  const url = $('#shareUrl').value;
+  try{ await navigator.clipboard.writeText(url); toast('Link copied'); }
+  catch(e){ $('#shareUrl').select(); document.execCommand('copy'); toast('Link copied'); }
+});
+$('#dlIcs').addEventListener('click', ()=>{
+  download('famcal.ics', toIcs(), 'text/calendar');
+});
+$('#dlJson').addEventListener('click', ()=>{
+  download('famcal.json', JSON.stringify({calendars:S.calendars, events:S.events, custody:S.custody}, null, 2), 'application/json');
+});
+$$('#shareDlg [data-close]').forEach(b=> b.addEventListener('click', ()=> $('#shareDlg').close()));
+
+function download(name, content, type){
+  const a = document.createElement('a');
+  const blob = new Blob([content], {type});
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+}
+
+function toIcs(){
+  const fold = s => s.replace(/.{75}/g, m=>m+'\r\n ');
+  const esc2 = s => (s||'').replace(/\\/g,'\\\\').replace(/\n/g,'\\n').replace(/,/g,'\\,').replace(/;/g,'\\;');
+  const stamp = d => {
+    if(d.length<=10) return d.replace(/-/g,'');
+    const [day,t] = d.split('T'); return day.replace(/-/g,'')+'T'+t.replace(/:/g,'')+'00';
+  };
+  const out = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//FamCal//EN','CALSCALE:GREGORIAN'];
+  for(const e of S.events){
+    const cal = calOf(e.calId);
+    out.push('BEGIN:VEVENT');
+    out.push('UID:'+e.id+'@famcal.local');
+    out.push('DTSTAMP:'+new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d+/,''));
+    if(e.allDay){
+      const endExc = isoLocal(addDays(parseISO((e.end||e.start).slice(0,10)),1)).replace(/-/g,'');
+      out.push('DTSTART;VALUE=DATE:'+e.start.slice(0,10).replace(/-/g,''));
+      out.push('DTEND;VALUE=DATE:'+endExc);
+    }else{
+      out.push('DTSTART:'+stamp(e.start));
+      out.push('DTEND:'+stamp(e.end||e.start));
+    }
+    out.push(fold('SUMMARY:'+esc2(e.title)));
+    if(e.location) out.push(fold('LOCATION:'+esc2(e.location)));
+    if(e.notes) out.push(fold('DESCRIPTION:'+esc2(e.notes)));
+    out.push('CATEGORIES:'+esc2(cal.name));
+    out.push('END:VEVENT');
+  }
+  out.push('END:VCALENDAR');
+  return out.join('\r\n');
+}
+
+function fromIcs(text){
+  const lines = text.replace(/\r\n[ \t]/g,'').split(/\r?\n/);
+  const events = [];
+  let cur = null;
+  for(const ln of lines){
+    if(ln==='BEGIN:VEVENT') cur = {};
+    else if(ln==='END:VEVENT'){ if(cur) events.push(icsToEvent(cur)); cur=null; }
+    else if(cur){
+      const i = ln.indexOf(':'); if(i<0) continue;
+      const key = ln.slice(0,i), val = ln.slice(i+1);
+      cur[key] = val;
+    }
+  }
+  return events.filter(Boolean);
+}
+function icsToEvent(o){
+  const unesc = s => (s||'').replace(/\\n/g,'\n').replace(/\\,/g,',').replace(/\\;/g,';').replace(/\\\\/g,'\\');
+  const parseDt = (v) => {
+    if(v.length===8) return v.slice(0,4)+'-'+v.slice(4,6)+'-'+v.slice(6,8);
+    const m = v.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/);
+    if(m) return `${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}`;
+    return null;
+  };
+  const sKey = Object.keys(o).find(k=>k.startsWith('DTSTART'));
+  const eKey = Object.keys(o).find(k=>k.startsWith('DTEND'));
+  const allDay = sKey && sKey.includes('VALUE=DATE');
+  let start = sKey && parseDt(o[sKey]);
+  let end   = eKey && parseDt(o[eKey]);
+  if(allDay && end){
+    // ICS DTEND for date is exclusive; subtract a day
+    const d = parseISO(end); end = isoLocal(addDays(d,-1));
+  }
+  if(!start) return null;
+  if(!end) end = start;
+  return {
+    id: uid(),
+    title: unesc(o.SUMMARY) || 'Untitled',
+    calId: S.calendars[0].id,
+    allDay: !!allDay,
+    start, end,
+    location: unesc(o.LOCATION||''),
+    notes: unesc(o.DESCRIPTION||''),
+  };
+}
+
+// ---------- import dialog ----------
+function openImport(prefill){
+  if(READONLY) return;
+  $('#impText').value = prefill||'';
+  $('#impReplace').checked = false;
+  $('#importDlg').showModal();
+}
+$('#impFile').addEventListener('change', async e=>{
+  const f = e.target.files[0]; if(!f) return;
+  const text = await f.text();
+  $('#impText').value = text;
+});
+$('#impGo').addEventListener('click', async ()=>{
+  const text = $('#impText').value.trim();
+  if(!text){ toast('Paste something first'); return; }
+  let payload = null;
+  if(text.startsWith('http') && text.includes('#d=')){
+    const hash = text.slice(text.indexOf('#'));
+    payload = await decodeShare(hash);
+  }else if(text.startsWith('http') && text.includes('#j=')){
+    const hash = text.slice(text.indexOf('#'));
+    payload = await decodeShare(hash);
+  }else if(text.includes('BEGIN:VCALENDAR')){
+    payload = { events: fromIcs(text) };
+  }else{
+    try{ payload = JSON.parse(text); }catch(e){ toast('Couldn\'t parse — paste a share link, .ics, or JSON'); return; }
+  }
+  if(!payload){ toast('Nothing imported'); return; }
+  mergePayload(payload, $('#impReplace').checked);
+  render(); $('#importDlg').close();
+  toast(`Imported ${payload.events?.length||0} event${(payload.events?.length||0)===1?'':'s'}`);
+});
+$$('#importDlg [data-close]').forEach(b=> b.addEventListener('click', ()=> $('#importDlg').close()));
+
+// ---------- topbar / sidebar actions ----------
+function toggleSb(){
+  if(innerWidth<=900){
+    document.getElementById('app').classList.toggle('sbopen');
+  }else{
+    S.prefs.sb = !S.prefs.sb; save(); render();
+  }
+}
+addEventListener('click', e=>{
+  const a = e.target.closest('[data-act]'); if(!a) return;
+  const act = a.dataset.act;
+  if(act==='sb') toggleSb();
+  else if(act==='new') openEvent({date:isoLocal(cursor)});
+  else if(act==='prev') step(-1);
+  else if(act==='next') step(1);
+  else if(act==='today'){ cursor=new Date(); selected=isoLocal(cursor); render(); }
+  else if(act==='share') openShare();
+  else if(act==='settings') openSettings();
+  else if(act==='custody') openSettings();
+  else if(act==='addcal') openSettings('cals');
+  else if(act==='import') openImport();
+  else if(act==='print') print();
+  else if(act==='theme'){ S.prefs.theme = S.prefs.theme==='dark'?'light':'dark'; save(); render(); }
+});
+$$('.seg button').forEach(b=> b.addEventListener('click', ()=>{ view=b.dataset.view; render(); }));
+
+function step(dir){
+  if(view==='year') cursor = new Date(cursor.getFullYear()+dir, cursor.getMonth(), 1);
+  else if(view==='month') cursor = addMonths(cursor, dir);
+  else cursor = addDays(cursor, dir*14);
+  render();
+}
+
+$('#search').addEventListener('input', e=>{ search = e.target.value.trim(); render(); });
+
+// ---------- keyboard ----------
+addEventListener('keydown', e=>{
+  if(document.querySelector('dialog[open]')) return;
+  if(e.target.matches('input,textarea,select')) return;
+  if(e.key==='n'){ openEvent({date:isoLocal(cursor)}); e.preventDefault(); }
+  else if(e.key==='t'){ cursor=new Date(); render(); }
+  else if(e.key==='ArrowLeft') step(-1);
+  else if(e.key==='ArrowRight') step(1);
+  else if(e.key==='1' || e.key.toLowerCase()==='y'){ view='year'; render(); }
+  else if(e.key==='2' || e.key.toLowerCase()==='m'){ view='month'; render(); }
+  else if(e.key==='3' || e.key.toLowerCase()==='a'){ view='agenda'; render(); }
+  else if(e.key==='/'){ $('#search').focus(); e.preventDefault(); }
+  else if(e.key.toLowerCase()==='s'){ toggleSb(); }
+});
+
+// ---------- toast / esc ----------
+function toast(msg){
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast._t); toast._t = setTimeout(()=> t.classList.remove('show'), 1600);
+}
+function esc(s){ return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+// ---------- banner for incoming share links ----------
+async function handleIncoming(){
+  if(!location.hash || !(location.hash.startsWith('#d=') || location.hash.startsWith('#j='))) return;
+  const payload = await decodeShare(location.hash);
+  if(!payload){ history.replaceState(null,'',location.pathname); return; }
+  const banner = $('#banner');
+  const n = payload.events?.length||0;
+  banner.innerHTML = `Incoming calendar with ${n} event${n===1?'':'s'}. <div class="spacer" style="flex:1"></div>
+    <button class="btn" data-impl="merge">Merge into mine</button>
+    <button class="btn" data-impl="replace">Replace mine</button>
+    <button class="btn" data-impl="dismiss">Dismiss</button>`;
+  banner.hidden = false;
+  banner.querySelectorAll('[data-impl]').forEach(b=> b.addEventListener('click', ()=>{
+    const m = b.dataset.impl;
+    if(m==='merge'){ mergePayload(payload,false); toast('Merged'); }
+    else if(m==='replace'){ if(confirm('Replace your local calendar with the incoming one?')){ mergePayload(payload,true); toast('Replaced'); } else return; }
+    banner.hidden = true;
+    history.replaceState(null,'',location.pathname);
+    render();
+  }));
+}
+
+// ---------- read-only shared view ----------
+// A read-only link looks like  ...#view&d=<blob>  (or #ro&...). The flag comes
+// BEFORE the data so decodeShare still receives a clean "#d=" / "#j=" string.
+function parseHash(){
+  const h = location.hash || '';
+  if(h.startsWith('#view') || h.startsWith('#ro')){
+    const amp = h.indexOf('&');
+    return { ro:true, dataHash: amp>=0 ? '#'+h.slice(amp+1) : '' };
+  }
+  return { ro:false, dataHash:h };
+}
+function enterReadonly(payload){
+  READONLY = true;
+  document.body.classList.add('ro');
+  save = ()=>{};                       // never persist a shared view to this device
+  const d = defaults();
+  S = {
+    calendars: (payload && payload.calendars && payload.calendars.length) ? payload.calendars : d.calendars,
+    events: (payload && payload.events) || [],
+    custody: (payload && payload.custody) || d.custody,
+    prefs: { ...d.prefs, ...((payload && payload.prefs) || {}), seeded:true },
+    v:1,
+  };
+  // info banner instead of the merge banner
+  const c = S.custody || {};
+  const names = (c.parents||[]).map(p=>p.name).filter(Boolean).join(' & ');
+  const banner = $('#banner');
+  banner.className = 'banner robanner';
+  banner.innerHTML = `<b>Shared schedule${names?` — ${esc(names)}`:''}</b>`
+    + `<span class="sub">Color shows who has the kids · view only · not editable</span>`;
+  banner.hidden = false;
+  view = (innerWidth<700) ? 'agenda' : 'month';
+  render();
+}
+
+// ---------- init ----------
+async function init(){
+  const { ro, dataHash } = parseHash();
+  if(ro){
+    const payload = dataHash ? await decodeShare(dataHash) : null;
+    enterReadonly(payload);
+    return;
+  }
+  seed();
+  view = (innerWidth<700) ? 'agenda' : 'month';
+  render();
+  handleIncoming();
+}
+init();
+</script>
+</body>
+</html>
