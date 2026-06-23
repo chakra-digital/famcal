@@ -1337,7 +1337,9 @@ function enterReadonly(payload){
   banner.innerHTML = `<b>Shared schedule${names?` — ${esc(names)}`:''}</b>`
     + `<span class="sub">Color shows who has the kids · view only · not editable</span>`;
   banner.hidden = false;
-  view = (innerWidth<700) ? 'agenda' : 'month';
+  // Always month in shared view — the day tints ARE the schedule. Agenda would
+  // be blank when there are no events (custody-only shares).
+  view = 'month';
   render();
 }
 
