@@ -562,6 +562,12 @@ function parentAt(date){
     const weeks = Math.floor(daysBetween(parseISO(c.anchorDate), sat)/7);
     return mod(weeks,2)===0 ? 1-c.anchorParent : c.anchorParent;
   }
+  if(c.pattern==='seq' && Array.isArray(c.seq) && c.seq.length){
+    // Generic repeating sequence. c.seq is one full cycle of per-day values
+    // aligned to anchorDate: 0 = anchorParent (primary home), 1 = other parent.
+    const v = c.seq[mod(diff, c.seq.length)];
+    return v===0 ? c.anchorParent : 1-c.anchorParent;
+  }
   return null;
 }
 function tintClass(date){
@@ -640,7 +646,7 @@ function renderSidebar(){
     cust.innerHTML = `<button class="sideact" data-act="custody">Enable rotation…</button>`;
   }
 }
-function patternLabel(p){ return {'alt-week':'Alternating weeks','2-2-3':'2-2-3','week-weekend':'Weekdays / weekends','alt-weekend':'Primary home + alternating weekends'}[p]||p; }
+function patternLabel(p){ return {'alt-week':'Alternating weeks','2-2-3':'2-2-3','week-weekend':'Weekdays / weekends','alt-weekend':'Primary home + alternating weekends','seq':'Custom repeating cycle'}[p]||p; }
 
 // ---------- year view ----------
 function renderYear(){
