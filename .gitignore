@@ -1,3 +1,4 @@
 .DS_Store
 :inbox/
 _gen_link.mjs
+.claude/
