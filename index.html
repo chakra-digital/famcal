@@ -272,6 +272,13 @@ body.ro .calrow{cursor:default}
 body.ro .mcell,body.ro .pill,body.ro .agitem,body.ro .mini .d{cursor:default}
 body.ro .robanner{background:linear-gradient(90deg,var(--ca),var(--cb))}
 body.ro .robanner .sub{opacity:.92;font-weight:400;margin-left:2px}
+/* keep event titles legible on phones in the shared view (few events) */
+@media(max-width:640px){
+  body.ro .pill{height:auto;line-height:15px;border-radius:4px;padding:0 4px;margin:1px 3px;
+    background:color-mix(in srgb,var(--c) 34%,transparent);font-size:10px}
+  body.ro .pill i,body.ro .pill .tm{display:none}
+  body.ro .pill span.s{display:inline;overflow:hidden;text-overflow:ellipsis}
+}
 
 /* ---------- responsive ---------- */
 .sboverlay{display:none}
