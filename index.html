@@ -574,6 +574,20 @@ function tintClass(date){
   const p = parentAt(date); if(p==null) return '';
   return p===0 ? 'cA' : 'cB';
 }
+// Month-cell custody tint. On an exchange day (owner differs from the day
+// before) the cell is split: ending parent's color in the top-left half,
+// beginning parent's color in the bottom-right half — shows the handoff.
+function custodyCell(date){
+  const p = parentAt(date); if(p==null) return {cls:'',style:''};
+  const prev = parentAt(addDays(date,-1));
+  if(prev!=null && prev!==p){
+    const mix = h => `color-mix(in srgb, ${h} 26%, transparent)`;
+    const cEnd = mix(S.custody.parents[prev].color);
+    const cBeg = mix(S.custody.parents[p].color);
+    return {cls:'split', style:`background:linear-gradient(135deg, ${cEnd} 0 calc(50% - .5px), var(--line) calc(50% - .5px) calc(50% + .5px), ${cBeg} calc(50% + .5px) 100%)`};
+  }
+  return {cls: p===0?'cA':'cB', style:''};
+}
 function applyCustodyColors(){
   document.documentElement.style.setProperty('--ca', S.custody.parents[0].color);
   document.documentElement.style.setProperty('--cb', S.custody.parents[1].color);
@@ -718,7 +732,7 @@ function renderMonth(){
     const date = addDays(first, i - startWd);
     const out = date.getMonth()!==m;
     const isToday = sameDay(date, today);
-    const tint = tintClass(date);
+    const ct = out ? {cls:tintClass(date),style:''} : custodyCell(date);
     const ev = eventsOn(date).filter(matchesSearch);
     const max = 3;
     let pills = '';
@@ -731,7 +745,7 @@ function renderMonth(){
     if(ev.length>max) pills += `<button class="more" data-d="${isoLocal(date)}">+${ev.length-max} more</button>`;
     const isFirstOfMonth = date.getDate()===1;
     const numLbl = isFirstOfMonth ? `${MONTH_NAMES[date.getMonth()].slice(0,3)} ${date.getDate()}` : date.getDate();
-    html += `<div class="mcell ${out?'out':''} ${isToday?'today':''} ${tint}" data-d="${isoLocal(date)}"><div class="num ${isFirstOfMonth?'mon':''}">${numLbl}</div>${pills}</div>`;
+    html += `<div class="mcell ${out?'out':''} ${isToday?'today':''} ${ct.cls}" style="${ct.style}" data-d="${isoLocal(date)}"><div class="num ${isFirstOfMonth?'mon':''}">${numLbl}</div>${pills}</div>`;
   }
   html += '</div></div>';
   $('#main').innerHTML = html;
@@ -1344,11 +1358,13 @@ function enterReadonly(payload){
   const banner = $('#banner');
   banner.className = 'banner robanner';
   banner.innerHTML = `<b>Shared schedule${names?` — ${esc(names)}`:''}</b>`
-    + `<span class="sub">Color shows who has the kids · view only · not editable</span>`;
+    + `<span class="sub">Color = who has the kids · split cell = exchange/handoff day · view only</span>`;
   banner.hidden = false;
   // Always month in shared view — the day tints ARE the schedule. Agenda would
   // be blank when there are no events (custody-only shares).
   view = 'month';
+  // Optionally open on a specific month (e.g. the summer the share is about).
+  if(S.prefs && S.prefs.focusMonth){ const d = parseISO(S.prefs.focusMonth); if(d && !isNaN(d)) cursor = d; }
   render();
 }
 
